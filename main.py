@@ -272,12 +272,12 @@ if __name__ == '__main__':
     TAU = 0.001
     DEVICE = '/cpu:0'
     # ENV_NAME = 'MountainCarContinuous-v0'
-    ENV_NAME = 'mppt-v0'#'Pendulum-v0'
+    ENV_NAME = 'mppt_shaded-v0'#'Pendulum-v0'
     # import gym_foo
     # ENV_NAME = 'nessie_end_to_end-v0'
     max_action = 5.
     min_action = -5.
-    epochs = 2000
+    epochs = 4000
     epsilon = 1.0
     min_epsilon = 0.1
     EXPLORE = 200
@@ -327,9 +327,9 @@ if __name__ == '__main__':
                 if replay_buffer.size() > MINIBATCH_SIZE:
                     s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
                     # train ddpg normally:
-                    #ddpg.train(s_batch, a_batch, r_batch, t_batch, s2_batch,MINIBATCH_SIZE)
+                    ddpg.train(s_batch, a_batch, r_batch, t_batch, s2_batch,MINIBATCH_SIZE)
                     #train with inverted gradients
-                    ddpg.test_gradient(s_batch, a_batch, r_batch, t_batch, s2_batch,MINIBATCH_SIZE)
+                    #ddpg.test_gradient(s_batch, a_batch, r_batch, t_batch, s2_batch,MINIBATCH_SIZE)
                 #print(i, step, 'last r', round(reward,3), 'episode reward',round(episode_r,3), 'epsilon', round(epsilon,3))
                 #print('epoch =',i,'step =' ,step, 'done =', done,'St(V,P,I) =',state,'last r =', round(reward[0][0],3), 'episode reward =',round(episode_r[0][0],3), 'epsilon =', round(epsilon,3))
                 if done:
