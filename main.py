@@ -288,7 +288,7 @@ if __name__ == '__main__':
         np.random.seed(RANDOM_SEED)
         tf.set_random_seed(RANDOM_SEED)
         env = gym.make(ENV_NAME)
-        state_dim = 3 #env.observation_space.shape[0]
+        state_dim = np.size(env.reset()) #env.observation_space.shape[0]
         action_dim = 1 #env.action_space.shape[0]
         ddpg = TD3(sess, state_dim, action_dim, max_action, min_action, ACTOR_LEARNING_RATE, CRITIC_LEARNING_RATE, TAU, RANDOM_SEED,device=DEVICE)
         sess.run(tf.global_variables_initializer())
