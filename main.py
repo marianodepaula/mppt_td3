@@ -103,10 +103,10 @@ class DDPG(object):
                 l1 = tf.contrib.layers.fully_connected(self.inputs, LAYER_1,  activation_fn=tf.nn.leaky_relu) # tf.nn.leaky_relu tf.nn.relu
                 l2 = tf.contrib.layers.fully_connected(l1, LAYER_2,  activation_fn=tf.nn.leaky_relu)
                 w_init = tf.random_uniform_initializer(minval=-0.003, maxval=0.003)
-                #a = tf.contrib.layers.fully_connected(l2, self.a_dim, weights_initializer=w_init, activation_fn=tf.nn.tanh) # (para el ddpg)
-                a = tf.contrib.layers.fully_connected(l2, self.a_dim, weights_initializer=w_init, activation_fn=None) # (para el inverted)
-                #scaled_a = tf.multiply(a,self.max_action) #(para el ddpg)
-                scaled_a = a # (para el inverted)
+                a = tf.contrib.layers.fully_connected(l2, self.a_dim, weights_initializer=w_init, activation_fn=tf.nn.tanh) # (para el ddpg)
+                #a = tf.contrib.layers.fully_connected(l2, self.a_dim, weights_initializer=w_init, activation_fn=None) # (para el inverted)
+                scaled_a = tf.multiply(a,self.max_action) #(para el ddpg)
+                #scaled_a = a # (para el inverted)
                 
                        
         saver = tf.train.Saver()
@@ -259,7 +259,16 @@ class DDPG(object):
             self.inputs: state
         })
 
+def normalizing_state(state):
+    #state = [V,P] being V_min = 0, V_max = 210, P_min = 0, P_max = 25000 we use ((xi-x_min)/(x_max-x_min))-1
+    V_min = 0
+    V_max = 210
+    P_min = 0
+    P_max = 25000
 
+    st = [(2*(state[0]-V_min)/(V_max-V_min))-1, (2*(state[1]-P_min)/(P_max-P_min))-1]
+
+    return st
 
 
 if __name__ == '__main__':
@@ -277,7 +286,7 @@ if __name__ == '__main__':
     # ENV_NAME = 'nessie_end_to_end-v0'
     max_action = 5.
     min_action = -5.
-    epochs = 4000
+    epochs = 2000
     epsilon = 1.0
     min_epsilon = 0.1
     EXPLORE = 200
@@ -296,8 +305,10 @@ if __name__ == '__main__':
         replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
         ruido = OUNoise(action_dim, mu = 0.0)
         llegadas =0
+        Reward_episodios = []
         for i in range(epochs):
             state = env.reset()
+            normalized_state = normalizing_state(state)
             #print('EL ESTADO RESETEADO ES', state, state.shape)
             done = False
             epsilon -= (epsilon/EXPLORE)
@@ -305,10 +316,11 @@ if __name__ == '__main__':
             episode_r = 0.
             step = 0
             max_steps = 110
+            r_episodio_actual = []
             while (not done):
                 step += 1
                 print('step =', step)
-                action = ddpg.predict_action(np.reshape(state,(1,state_dim)))
+                action = ddpg.predict_action(np.reshape(normalized_state,(1,state_dim)))
                 action1 = action
                 print('LA ACCION sin clipear ES', action1, action1.shape) 
                 action = np.clip(action1,min_action,max_action)
@@ -317,13 +329,17 @@ if __name__ == '__main__':
                 print('LA ACCION clipeada ES', action, action.shape) 
                 
                 next_state, reward, done, info = env.step(action)
+                normalized_next_state = normalizing_state(next_state)
                 #print('EL NEXT_ESTADO ES', next_state, next_state.shape) 
                 #reward = np.clip(reward,-1.,1.)
                 print('instaneous r = ',reward)
-                replay_buffer.add(np.reshape(state, (state_dim,)), np.reshape(action, (action_dim,)), reward,
-                                      done, np.reshape(next_state, (state_dim,)))
+                replay_buffer.add(np.reshape(normalized_state, (state_dim,)), np.reshape(action, (action_dim,)), reward,
+                                      done, np.reshape(normalized_next_state, (state_dim,)))
                 state = next_state
                 episode_r = episode_r + reward
+                normalized_state = normalizing_state(state)
+
+                r_episodio_actual.append(reward)
                 if replay_buffer.size() > MINIBATCH_SIZE:
                     s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
                     # train ddpg normally:
@@ -337,6 +353,10 @@ if __name__ == '__main__':
                 print ('--------------------------------------------')
                 print('epoch =',i,'step =' ,step, 'done =', done,'St(V,P,I) =',state, 'accion =',action,'last r =', reward, 'episode reward =',episode_r, 'epsilon =', round(epsilon,3))
                 print ('--------------------------------------------')
+
+            Reward_episodios.append(r_episodio_actual)
+            np.save('Reward_episodios_TD301.npy',Reward_episodios)
+ 
         print('FINNNNNN!!! =) y llego ',llegadas, 'veces!!')                
 
 
