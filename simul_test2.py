@@ -436,7 +436,7 @@ if __name__ == '__main__':
             epsilon = np.maximum(min_epsilon,epsilon)
             episode_r = 0.
             step = 0
-            max_steps = 50
+            max_steps = 1000
             Temp_i = temperaturas[i]
             Irr_i = irradiancias[i]
             SH_i=sh[i]
